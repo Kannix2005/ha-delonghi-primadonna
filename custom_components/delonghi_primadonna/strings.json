@@ -25,8 +25,9 @@
                 "state": {
                     "unknown": "Unknown",
                     "detached": "Detached",
-                    "steam": "Steam",
+                    "steam": "Steam nozzle",
                     "milk_frother": "Milk frother",
+                    "chocolate": "Chocolate nozzle",
                     "milk_frother_cleaning": "Milk frother cleaning"
                 }
             },
@@ -39,7 +40,7 @@
                     "motor_down": "Motor down",
                     "coffee_waste_container": "Coffee waste container",
                     "water_tank_absent": "Water tank absent",
-                    "knob": "Knob",
+                    "knob": "Dial",
                     "water_level_low": "Water level low",
                     "coffee_jug": "Coffee jug",
                     "ifd_caraffe": "Milk carafe",

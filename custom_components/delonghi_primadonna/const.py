@@ -1,4 +1,4 @@
-"""Constants for the oiot integration."""
+"""Constants for the De'Longhi Primadonna integration."""
 from homeassistant.const import EntityCategory
 
 DOMAIN = 'delonghi_primadonna'

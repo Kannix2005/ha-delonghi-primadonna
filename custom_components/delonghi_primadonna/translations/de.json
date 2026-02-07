@@ -27,7 +27,7 @@
         "name": "Getränk"
       },
       "energy_save_mode": {
-        "name": "Danach ausschalten"
+        "name": "Ausschalten nach"
       },
       "water_hardness": {
         "name": "Wasserhärte"
@@ -38,21 +38,21 @@
     },
     "button": {
       "power_on": {
-        "name": "Sich einschalten"
+        "name": "Einschalten"
       }
     },
     "switch": {
       "cup_light": {
-        "name": "Tasse Licht"
+        "name": "Tassenbeleuchtung"
       },
       "debug_notification": {
-        "name": "Debugg -Benachrichtigung"
+        "name": "Debug-Benachrichtigung"
       },
       "energy_save_mode": {
         "name": "Energiesparmodus"
       },
       "sounds": {
-        "name": "Geräusche"
+        "name": "Signaltöne"
       }
     },
     "sensor": {
@@ -61,8 +61,9 @@
         "state": {
           "unknown": "Unbekannt",
           "detached": "Abgenommen",
-          "steam": "Dampf",
+          "steam": "Dampfdüse",
           "milk_frother": "Milchaufschäumer",
+          "chocolate": "Schokoladendüse",
           "milk_frother_cleaning": "Milchaufschäumer (Reinigung)"
         }
       },
@@ -75,7 +76,7 @@
           "motor_down": "Motor runter",
           "coffee_waste_container": "Kaffeesatzbehälter",
           "water_tank_absent": "Wassertank fehlt",
-          "knob": "Knopf",
+          "knob": "Drehregler",
           "water_level_low": "Wasserstand niedrig",
           "coffee_jug": "Kaffeekanne",
           "ifd_caraffe": "Milchkaraffe",
@@ -89,16 +90,16 @@
   },
   "services": {
     "make_beverage": {
-      "name": "Getränk machen",
-      "description": "Bereiten Sie ein Getränk aus der folgenden Liste vor",
+      "name": "Getränk zubereiten",
+      "description": "Getränk aus der Liste zubereiten",
       "fields": {
         "beverage": {
           "name": "Getränk",
-          "description": "Getränk zur Vorbereitung"
+          "description": "Zuzubereitendes Getränk"
         },
         "entity_id": {
-          "name": "Entity ID",
-          "description": "Entitäts -ID der Kaffeemaschine"
+          "name": "Entity-ID",
+          "description": "Entity-ID der Kaffeemaschine"
         }
       }
     }
@@ -108,13 +109,13 @@
       "options": {
         "none": "Keiner",
         "steam": "Dampf",
-        "long": "Lang",
+        "long": "Lungo",
         "coffee": "Kaffee",
-        "dopio": "DOPPELT",
-        "hot_water": "Heißes Wasser",
+        "dopio": "Doppio",
+        "hot_water": "Heißwasser",
         "espresso": "Espresso",
         "americano": "Americano",
-        "espresso2": "Espresso 2"
+        "espresso2": "Espresso 2x"
       }
     }
   }
