@@ -28,9 +28,10 @@ class MachineSwitch(Enum):
 
 
 class MachineAlarm(Enum):
-    """Known machine alarms (byte[7-8] u16 LE bitmask).
+    """Known machine alarms (byte[7-8]+[12-13] = u32 LE bitmask).
 
-    Source: mmastrac/longshot EcamMachineAlarm enum.
+    Source: DeLonghi Coffee Link APK v4.9.6, EnumC8916l.java.
+    Bytes 7-8 = alarm_low (bits 0-15), bytes 12-13 = alarm_high (bits 16-31).
     """
 
     EMPTY_WATER_TANK = "empty_water_tank"                  # bit 0
@@ -49,6 +50,19 @@ class MachineAlarm(Enum):
     TANK_IS_IN_POSITION = "tank_is_in_position"            # bit 13
     CLEAN_KNOB = "clean_knob"                              # bit 14
     COFFEE_BEANS_EMPTY_TWO = "coffee_beans_empty_two"      # bit 15
+    # -- High 16 bits (bytes 12-13) --
+    TANK_TOO_FULL = "tank_too_full"                        # bit 16
+    BEAN_HOPPER_ABSENT = "bean_hopper_absent"              # bit 17
+    GRID_PRESENCE = "grid_presence"                        # bit 18
+    INFUSER_SENSE = "infuser_sense"                        # bit 19
+    NOT_ENOUGH_COFFEE = "not_enough_coffee"                # bit 20
+    EXPANSION_COMM_PROB = "expansion_comm_prob"            # bit 21
+    EXPANSION_SUBMODULES_PROB = "expansion_submodules_prob"  # bit 22
+    GRINDING_UNIT_1_PROBLEM = "grinding_unit_1_problem"    # bit 23
+    GRINDING_UNIT_2_PROBLEM = "grinding_unit_2_problem"    # bit 24
+    CONDENSE_FAN_PROBLEM = "condense_fan_problem"          # bit 25
+    CLOCK_BT_COMM_PROBLEM = "clock_bt_comm_problem"        # bit 26
+    SPI_COMM_PROBLEM = "spi_comm_problem"                  # bit 27
 
 
 _SWITCH_BIT_MAP: dict[int, MachineSwitch] = {
@@ -85,6 +99,19 @@ _ALARM_BIT_MAP: dict[int, MachineAlarm] = {
     13: MachineAlarm.TANK_IS_IN_POSITION,
     14: MachineAlarm.CLEAN_KNOB,
     15: MachineAlarm.COFFEE_BEANS_EMPTY_TWO,
+    # High 16 bits (bytes 12-13)
+    16: MachineAlarm.TANK_TOO_FULL,
+    17: MachineAlarm.BEAN_HOPPER_ABSENT,
+    18: MachineAlarm.GRID_PRESENCE,
+    19: MachineAlarm.INFUSER_SENSE,
+    20: MachineAlarm.NOT_ENOUGH_COFFEE,
+    21: MachineAlarm.EXPANSION_COMM_PROB,
+    22: MachineAlarm.EXPANSION_SUBMODULES_PROB,
+    23: MachineAlarm.GRINDING_UNIT_1_PROBLEM,
+    24: MachineAlarm.GRINDING_UNIT_2_PROBLEM,
+    25: MachineAlarm.CONDENSE_FAN_PROBLEM,
+    26: MachineAlarm.CLOCK_BT_COMM_PROBLEM,
+    27: MachineAlarm.SPI_COMM_PROBLEM,
 }
 
 
@@ -124,13 +151,16 @@ def parse_switches(data: bytes) -> List[MachineSwitch]:
 def parse_alarms(data: bytes) -> List[MachineAlarm]:
     """Parse alarm states from a MonitorV2 response.
 
-    Alarms are bytes[7-8] as u16 LE.
+    Alarms are 32-bit LE split across bytes[7-8] (low) + bytes[12-13] (high).
+    Source: DeLonghi Coffee Link APK MonitorDataV2.mo27702b().
     """
     if len(data) < 9:
         return []
     mask = data[7] | (data[8] << 8)
+    if len(data) >= 14:
+        mask |= (data[12] << 16) | (data[13] << 24)
     result: List[MachineAlarm] = []
-    for bit in range(16):
+    for bit in range(28):
         if mask & (1 << bit):
             alarm = alarm_from_bit(bit)
             if alarm is not None and alarm not in result:
@@ -139,10 +169,16 @@ def parse_alarms(data: bytes) -> List[MachineAlarm]:
 
 
 def get_alarm_mask(data: bytes) -> int:
-    """Get raw alarm bitmask from MonitorV2 response."""
+    """Get raw 32-bit alarm bitmask from MonitorV2 response.
+
+    Bytes 7-8 = low 16 bits, bytes 12-13 = high 16 bits.
+    """
     if len(data) < 9:
         return 0
-    return data[7] | (data[8] << 8)
+    mask = data[7] | (data[8] << 8)
+    if len(data) >= 14:
+        mask |= (data[12] << 16) | (data[13] << 24)
+    return mask
 
 
 __all__ = [

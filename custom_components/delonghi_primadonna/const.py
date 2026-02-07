@@ -53,16 +53,23 @@ NOZZLE_STATE = {
 SERVICE_STATE = {0: 'OK', 4: 'DESCALING'}
 
 # ── MonitorV2 (0x75) protocol definitions ─────────────────────────
-# Source: mmastrac/longshot (Rust ECAM CLI) — authoritative reference
+# Source: DeLonghi Coffee Link APK v4.9.6 (MonitorDataV2.java)
+#         + mmastrac/longshot (Rust ECAM CLI) for cross-reference
 #
 # Byte layout of MonitorV2 response payload (after D0 LEN 75 0F):
-#   byte[4]     = EcamAccessory  (u8 enum)
-#   byte[5-6]   = EcamMachineSwitch  (u16 LE bitmask)
-#   byte[7-8]   = EcamMachineAlarm   (u16 LE bitmask)
-#   byte[9]     = EcamMachineState   (u8 enum)
-#   byte[10]    = progress           (u8, 0-100)
-#   byte[11]    = percentage         (u8, 0-100)
-#   byte[12-16] = unknown (always 0)
+#   byte[4]     = EcamAccessory        (u8 enum)
+#   byte[5-6]   = EcamMachineSwitch    (u16 LE bitmask)
+#   byte[7-8]   = EcamMachineAlarm LOW (u16 LE, alarm bits 0-15)
+#   byte[9]     = EcamMachineState     (u8 enum)
+#   byte[10]    = progress             (u8, 0-100)
+#   byte[11]    = percentage           (u8, 0-100)
+#   byte[12-13] = EcamMachineAlarm HIGH (u16 LE, alarm bits 16-31)
+#   byte[14-16] = unknown
+#
+# IMPORTANT: Alarms are 32-bit! The APK reads them as:
+#   alarm_mask = byte[7] | (byte[8]<<8) | (byte[12]<<16) | (byte[13]<<24)
+# Longshot only used 16-bit (bytes 7-8). The APK proves bytes 12-13 are
+# the upper 16 bits of the alarm bitmask.
 
 # Machine state from byte[9]
 ECAM_MACHINE_STATE = {
@@ -80,7 +87,8 @@ ECAM_MACHINE_STATE = {
     16: 'ChocolatePreparation',
 }
 
-# Alarm bitmask from bytes[7-8] (u16 LE)
+# Alarm bitmask from bytes[7-8]+[12-13] (u32 LE, split across gap)
+# Source: DeLonghi Coffee Link APK v4.9.6, EnumC8916l.java
 ECAM_ALARM = {
     0: 'EmptyWaterTank',
     1: 'CoffeeWasteContainerFull',
@@ -110,6 +118,96 @@ ECAM_ALARM = {
     25: 'CondenseFanProblem',
     26: 'ClockBtCommProblem',
     27: 'SpiCommProblem',
+}
+
+# ── Beverage IDs (EnumC8905a) ──────────────────────────────────────
+# Source: DeLonghi Coffee Link APK v4.9.6, 82 beverage definitions
+ECAM_BEVERAGE_ID = {
+    # Standard beverages
+    1: 'Espresso', 2: 'Coffee', 3: 'Long', 4: 'Espresso2x',
+    5: 'DoppioPlus', 6: 'Americano', 7: 'Cappuccino',
+    8: 'LatteMacchiato', 9: 'CaffeLatte', 10: 'FlatWhite',
+    11: 'EspressoMacchiato', 12: 'HotMilk', 13: 'CappuccinoDoppioPlus',
+    14: 'ColdMilk', 15: 'CappuccinoReverse', 16: 'HotWater',
+    17: 'Steam', 18: 'Ciocco',
+    # Extended
+    19: 'Ristretto', 20: 'LongEspresso', 21: 'CoffeeCream',
+    22: 'Tea', 23: 'CoffeePot', 24: 'Cortado', 25: 'LongBlack',
+    26: 'TravelMug', 27: 'BrewOverIce',
+    # Iced beverages
+    50: 'IceAmericano', 51: 'IceCappuccino', 52: 'IceLatteMacchiato',
+    53: 'IceCappuccinoMix', 54: 'IceFlatWhite', 55: 'IceColdMilk',
+    56: 'IceCaffeLatte', 57: 'OverIceEspresso',
+    # Mug beverages
+    80: 'MugAmericano', 81: 'MugCappuccino', 82: 'MugLatteMacchiato',
+    83: 'MugCaffeLatte', 84: 'MugCappuccinoMix', 85: 'MugFlatWhite',
+    86: 'MugHotMilk',
+    # Mug+Ice beverages
+    100: 'MugIceOverIce', 101: 'MugIceAmericano', 102: 'MugIceCappuccino',
+    103: 'MugIceLatteMacchiato', 104: 'MugIceCaffeLatte',
+    105: 'MugIceCappuccinoMix', 106: 'MugIceFlatWhite',
+    107: 'MugIceColdMilk',
+    # Cold brew
+    120: 'ColdBrewCoffee', 121: 'ColdBrewEssence', 122: 'ColdBrewPot',
+    123: 'ColdBrewLatte', 124: 'ColdBrewCappuccino',
+    140: 'ColdBrewMug', 141: 'ColdBrewLatteMug',
+    142: 'ColdBrewCappuccinoMug',
+    # Bean systems
+    200: 'Bean01', 201: 'Bean02', 202: 'Bean03',
+    203: 'Bean04', 204: 'Bean05', 205: 'Bean06',
+    # Custom recipes V2
+    230: 'CustomV2_01', 231: 'CustomV2_02', 232: 'CustomV2_03',
+    233: 'CustomV2_04', 234: 'CustomV2_05', 235: 'CustomV2_06',
+    236: 'CustomV2_07', 237: 'CustomV2_08', 238: 'CustomV2_09',
+    239: 'CustomV2_10',
+}
+
+# ── Recipe Parameters (EnumC8913i) ────────────────────────────────
+# Source: DeLonghi Coffee Link APK v4.9.6, 35 parameters
+ECAM_RECIPE_PARAM = {
+    0: 'Temp', 1: 'Coffee', 2: 'Taste', 3: 'Granulometry',
+    4: 'Blend', 5: 'InfusionSpeed', 6: 'Preinfusion', 7: 'Crema',
+    8: 'DuePer', 9: 'Milk', 10: 'MilkTemp', 11: 'MilkFroth',
+    12: 'Inversion', 13: 'TeaTemp', 14: 'TeaProfile', 15: 'HotWater',
+    16: 'MixVelocity', 17: 'MixDuration', 18: 'DensityMultiBeverage',
+    19: 'TempMultiBeverage', 20: 'DecalcType', 21: 'TempRinse',
+    22: 'WaterRinse', 23: 'CleanType', 24: 'Programable',
+    25: 'Visible', 26: 'VisibleInProgramming', 27: 'IndexLength',
+    28: 'Accessory', 31: 'Iced', 32: 'MugSize', 33: 'MugAdjust',
+    37: 'NumIceCubes', 38: 'Intensity', 39: 'Rinse',
+}
+
+# ── Taste / Strength Values (EnumC8907c) ──────────────────────────
+ECAM_TASTE = {
+    0: ('Preground', 0x00),
+    1: ('ExtraMild', 0x10),
+    2: ('Mild', 0x20),
+    3: ('Normal', 0x30),
+    4: ('Strong', 0x40),
+    5: ('ExtraStrong', 0x50),
+}
+
+# ── Dispense Action (EnumC8923s) ──────────────────────────────────
+ECAM_ACTION = {
+    0: 'DontCare',
+    1: 'Start',
+    2: 'StartProgram',  # also StopV2
+    3: 'CheckStart',
+    4: 'Stop',
+    5: 'StopProgram',
+    6: 'SkipRinse',
+    7: 'AdvancedMode',
+}
+
+# ── Beverage Action (EnumC8906b) ──────────────────────────────────
+ECAM_BEVERAGE_ACTION = {
+    0: 'DeleteBeverage',
+    1: 'SaveBeverage',
+    2: 'PrepareBeverage',
+    3: 'PrepareAndSave',
+    5: 'SaveInversion',
+    6: 'PrepareInversion',
+    7: 'PrepareSaveInversion',
 }
 
 # High-level sensor status values (matching longshot EcamStatus)

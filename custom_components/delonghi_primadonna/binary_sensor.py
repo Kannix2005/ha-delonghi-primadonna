@@ -11,6 +11,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .base_entity import DelonghiDeviceEntity
 from .const import DOMAIN
 from .device import DelongiPrimadonna
+from .machine_switch import MachineAlarm
 
 
 async def async_setup_entry(
@@ -90,7 +91,7 @@ class DelongiPrimadonnaDescaleSensor(
     def is_on(self) -> bool:
         if (is_on := getattr(self, '_attr_is_on', None)) is not None:
             return is_on
-        return bool((self.device.service >> 2) % 2)
+        return MachineAlarm.DESCALE_ALARM in self.device.active_alarms
 
     @property
     def icon(self):
@@ -124,7 +125,7 @@ class DelongiPrimadonnaFilterSensor(
     def is_on(self) -> bool:
         if (is_on := getattr(self, '_attr_is_on', None)) is not None:
             return is_on
-        return bool((self.device.service >> 3) % 2)
+        return MachineAlarm.REPLACE_WATER_FILTER in self.device.active_alarms
 
     @property
     def icon(self):

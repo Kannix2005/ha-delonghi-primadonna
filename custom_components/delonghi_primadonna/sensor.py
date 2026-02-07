@@ -175,7 +175,7 @@ class DelongiPrimadonnaAlarmSensor(
     def extra_state_attributes(self):
         """Expose raw alarm bitmask."""
         return {
-            'alarm_mask': f'0x{self.device.alarm_mask:04x}',
+            'alarm_mask': f'0x{self.device.alarm_mask:08x}',
             'alarm_count': len(self.device.active_alarms),
         }
 

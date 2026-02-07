@@ -339,13 +339,14 @@ class DelongiPrimadonna:
     def _classify_notification(self, value):
         """Classify 0x75 notification by protocol-correct byte analysis.
 
-        MonitorV2 (0x75) byte layout (longshot reference):
-          byte[4]   = EcamAccessory  (nozzle/accessory type)
-          byte[5-6] = u16 LE switches bitmask
-          byte[7-8] = u16 LE alarms bitmask
-          byte[9]   = EcamMachineState
-          byte[10]  = progress (0-100)
-          byte[11]  = percentage (0-100)
+        MonitorV2 (0x75) byte layout (APK MonitorDataV2 + longshot):
+          byte[4]     = EcamAccessory  (nozzle/accessory type)
+          byte[5-6]   = u16 LE switches bitmask
+          byte[7-8]   = u16 LE alarms LOW (bits 0-15)
+          byte[9]     = EcamMachineState
+          byte[10]    = progress (0-100)
+          byte[11]    = percentage (0-100)
+          byte[12-13] = u16 LE alarms HIGH (bits 16-31)
         """
         state = value[9]
         progress = value[10] if len(value) > 10 else 0
@@ -454,12 +455,13 @@ class DelongiPrimadonna:
 
         if answer_id == 0x75:
             # ── MonitorV2 protocol-correct parsing ─────────────────
-            # byte[4]   = EcamAccessory (nozzle type)
-            # byte[5-6] = u16 LE switches bitmask
-            # byte[7-8] = u16 LE alarms bitmask
-            # byte[9]   = EcamMachineState
-            # byte[10]  = progress (0-100)
-            # byte[11]  = percentage (0-100)
+            # byte[4]     = EcamAccessory (nozzle type)
+            # byte[5-6]   = u16 LE switches bitmask
+            # byte[7-8]   = u16 LE alarms LOW (bits 0-15)
+            # byte[9]     = EcamMachineState
+            # byte[10]    = progress (0-100)
+            # byte[11]    = percentage (0-100)
+            # byte[12-13] = u16 LE alarms HIGH (bits 16-31)
             self.steam_nozzle = NOZZLE_STATE.get(value[4], str(value[4]))
             self.active_switches = parse_switches(value)
             self.active_alarms = parse_alarms(value)
