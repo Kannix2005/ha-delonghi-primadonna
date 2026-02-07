@@ -1,0 +1,121 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Urządzenie jest już skonfigurowane"
+    },
+    "error": {
+      "cannot_connect": "Błąd połączenia",
+      "invalid_auth": "Nieprawidłowe uwierzytelnienie",
+      "unknown": "Niespodziewany błąd"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mac": "MAC",
+          "name": "Nazwa",
+          "model": "Model"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "profile": {
+        "name": "Profil"
+      },
+      "make_beverage": {
+        "name": "Napój"
+      },
+      "energy_save_mode": {
+        "name": "Wyłącz po"
+      },
+      "water_hardness": {
+        "name": "Twardość wody"
+      },
+      "water_temperature": {
+        "name": "Temperatura wody"
+      }
+    },
+    "button": {
+      "power_on": {
+        "name": "Włącz"
+      }
+    },
+    "switch": {
+      "cup_light": {
+        "name": "Podświetlenie filiżanki"
+      },
+      "debug_notification": {
+        "name": "Powiadomienie debugowania"
+      },
+      "energy_save_mode": {
+        "name": "Tryb oszczędzania energii"
+      },
+      "sounds": {
+        "name": "Dźwięk"
+      }
+    },
+    "sensor": {
+      "nozzle_status": {
+        "name": "Stan dyszy",
+        "state": {
+          "unknown": "Nieznany",
+          "detached": "Odłączona",
+          "steam": "Para",
+          "milk_frother": "Spieniacz mleka",
+          "milk_frother_cleaning": "Spieniacz mleka (czyszczenie)"
+        }
+      },
+      "switches": {
+        "name": "Przełączniki",
+        "state": {
+          "none": "Brak",
+          "water_spout": "Wylewka wodna",
+          "motor_up": "Silnik w górę",
+          "motor_down": "Silnik w dół",
+          "coffee_waste_container": "Pojemnik na fusy",
+          "water_tank_absent": "Brak zbiornika wody",
+          "knob": "Pokrętło",
+          "water_level_low": "Niski poziom wody",
+          "coffee_jug": "Dzbanek do kawy",
+          "ifd_caraffe": "Dzbanek na mleko",
+          "ciocco_tank": "Zbiornik czekolady",
+          "clean_knob": "Pokrętło czyszczenia",
+          "door_opened": "Drzwi otwarte",
+          "preground_door_opened": "Otwarta klapka mielonej kawy"
+        }
+      }
+    }
+  },
+  "services": {
+    "make_beverage": {
+      "name": "Przygotuj napój",
+      "description": "Przygotuj napój z poniższej listy",
+      "fields": {
+        "beverage": {
+          "name": "Napój",
+          "description": "Napój do przygotowania"
+        },
+        "entity_id": {
+          "name": "ID encji",
+          "description": "ID encji ekspresu do kawy"
+        }
+      }
+    }
+  },
+  "selector": {
+    "beverage": {
+      "options": {
+        "none": "Brak",
+        "steam": "Para",
+        "long": "Long",
+        "coffee": "Coffee",
+        "dopio": "Doppio",
+        "hot_water": "Gorąca woda",
+        "espresso": "Espresso",
+        "americano": "Americano",
+        "espresso2": "Podwójne Espresso"
+      }
+    }
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Устройство уже добалено"
+    },
+    "error": {
+      "cannot_connect": "Не могу подключиться",
+      "invalid_auth": "Не могу авторизоваться",
+      "unknown": "Неожиданная ошибка"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mac": "MAC",
+          "name": "Название",
+          "model": "Модель"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "profile": {
+        "name": "Профиль"
+      },
+      "make_beverage": {
+        "name": "Напиток"
+      },
+      "energy_save_mode": {
+        "name": "Aвтоотключение"
+      },
+      "water_hardness": {
+        "name": "Жесткость воды"
+      },
+      "water_temperature": {
+        "name": "Температура воды"
+      }
+    },
+    "button": {
+      "power_on": {
+        "name": "Включить"
+      }
+    },
+    "switch": {
+      "cup_light": {
+        "name": "Подсветка чашки"
+      },
+      "debug_notification": {
+        "name": "Отладочные уведомления"
+      },
+      "energy_save_mode": {
+        "name": "Энергосбережение"
+      },
+      "sounds": {
+        "name": "Звук кнопок"
+      }
+    },
+    "sensor": {
+      "nozzle_status": {
+        "name": "Статус насадки",
+        "state": {
+          "unknown": "Неизвестно",
+          "detached": "Отсоединена",
+          "steam": "Паровая насадка",
+          "milk_frother": "Капучинатор",
+          "milk_frother_cleaning": "Капучинатор (чистка)"
+        }
+      },
+      "switches": {
+        "name": "Переключатели",
+        "state": {
+          "none": "Нет",
+          "water_spout": "Вывод воды",
+          "motor_up": "Двигатель вверх",
+          "motor_down": "Двигатель вниз",
+          "coffee_waste_container": "Контейнер для отходов кофе",
+          "water_tank_absent": "Нет резервуара для воды",
+          "knob": "Ручка",
+          "water_level_low": "Низкий уровень воды",
+          "coffee_jug": "Кофейник",
+          "ifd_caraffe": "Молочник",
+          "ciocco_tank": "Емкость для шоколада",
+          "clean_knob": "Ручка очистки",
+          "door_opened": "Дверца открыта",
+          "preground_door_opened": "Отсек молотого кофе открыт"
+        }
+      }
+    }
+  },
+  "services": {
+    "make_beverage": {
+      "name": "Приготовить напиток",
+      "description": "Приготовить напиток из заданного списка",
+      "fields": {
+        "beverage": {
+          "name": "Напиток",
+          "description": "Напиток который будет приготовлен"
+        },
+        "entity_id": {
+          "name": "Сущность",
+          "description": "Сущность которая будет использована для приготовления напитка"
+        }
+      }
+    }
+  },
+  "selector": {
+    "beverage": {
+      "options": {
+        "none": "Нет",
+        "steam": "Пар",
+        "long": "Лунго",
+        "coffee": "Кофе",
+        "dopio": "Допио",
+        "hot_water": "Горячая вода",
+        "espresso": "Эспрессо",
+        "americano": "Американо",
+        "espresso2": "Эспрессо 2"
+      }
+    }
+  }
+}

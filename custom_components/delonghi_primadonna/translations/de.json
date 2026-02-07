@@ -1,0 +1,121 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert"
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Ungültige Authentifizierung",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mac": "MAC",
+          "name": "Name",
+          "model": "Modell"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "profile": {
+        "name": "Profil"
+      },
+      "make_beverage": {
+        "name": "Getränk"
+      },
+      "energy_save_mode": {
+        "name": "Danach ausschalten"
+      },
+      "water_hardness": {
+        "name": "Wasserhärte"
+      },
+      "water_temperature": {
+        "name": "Wassertemperatur"
+      }
+    },
+    "button": {
+      "power_on": {
+        "name": "Sich einschalten"
+      }
+    },
+    "switch": {
+      "cup_light": {
+        "name": "Tasse Licht"
+      },
+      "debug_notification": {
+        "name": "Debugg -Benachrichtigung"
+      },
+      "energy_save_mode": {
+        "name": "Energiesparmodus"
+      },
+      "sounds": {
+        "name": "Geräusche"
+      }
+    },
+    "sensor": {
+      "nozzle_status": {
+        "name": "Düsenzustand",
+        "state": {
+          "unknown": "Unbekannt",
+          "detached": "Abgenommen",
+          "steam": "Dampf",
+          "milk_frother": "Milchaufschäumer",
+          "milk_frother_cleaning": "Milchaufschäumer (Reinigung)"
+        }
+      },
+      "switches": {
+        "name": "Schalter",
+        "state": {
+          "none": "Keine",
+          "water_spout": "Wasserauslauf",
+          "motor_up": "Motor hoch",
+          "motor_down": "Motor runter",
+          "coffee_waste_container": "Kaffeesatzbehälter",
+          "water_tank_absent": "Wassertank fehlt",
+          "knob": "Knopf",
+          "water_level_low": "Wasserstand niedrig",
+          "coffee_jug": "Kaffeekanne",
+          "ifd_caraffe": "Milchkaraffe",
+          "ciocco_tank": "Schokoladentank",
+          "clean_knob": "Reinigungsknopf",
+          "door_opened": "Tür geöffnet",
+          "preground_door_opened": "Fach für gemahlenen Kaffee geöffnet"
+        }
+      }
+    }
+  },
+  "services": {
+    "make_beverage": {
+      "name": "Getränk machen",
+      "description": "Bereiten Sie ein Getränk aus der folgenden Liste vor",
+      "fields": {
+        "beverage": {
+          "name": "Getränk",
+          "description": "Getränk zur Vorbereitung"
+        },
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entitäts -ID der Kaffeemaschine"
+        }
+      }
+    }
+  },
+  "selector": {
+    "beverage": {
+      "options": {
+        "none": "Keiner",
+        "steam": "Dampf",
+        "long": "Lang",
+        "coffee": "Kaffee",
+        "dopio": "DOPPELT",
+        "hot_water": "Heißes Wasser",
+        "espresso": "Espresso",
+        "americano": "Americano",
+        "espresso2": "Espresso 2"
+      }
+    }
+  }
+}
