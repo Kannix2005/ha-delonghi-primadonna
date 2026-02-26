@@ -13,7 +13,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import BEVERAGE_SERVICE_NAME, DOMAIN
-from .device import AvailableBeverage, BeverageEntityFeature, DelongiPrimadonna
+from .device import BeverageEntityFeature, DelongiPrimadonna
 
 # Periodic status poll interval in seconds.
 # The machine sends BLE notifications every ~6s, but we additionally
@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         make_beverage,
         schema=vol.Schema(
             {
-                vol.Required('beverage'): vol.In([*AvailableBeverage]),
+                vol.Required('beverage'): vol.Coerce(str),
                 vol.Optional('entity_id'): vol.Coerce(str),
                 vol.Optional('device_id'): vol.Coerce(str),
             }

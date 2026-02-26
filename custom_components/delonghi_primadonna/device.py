@@ -38,6 +38,14 @@ from .const import (AMERICANO_OFF, AMERICANO_ON, AVAILABLE_PROFILES,
 from .machine_switch import (MachineSwitch, MachineAlarm,
                              parse_switches, parse_alarms, get_alarm_mask)
 from .model import get_machine_model
+from .protocol import (
+    build_beverage_command,
+    build_stop_command,
+    build_read_profile_recipe,
+    parse_profile_recipe_response,
+    ACTION_START,
+    OP_PREPARE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +61,7 @@ class BeverageEntityFeature(IntFlag):
 
 
 class AvailableBeverage(StrEnum):
-    """Coffee machine available beverages"""
+    """Coffee machine available beverages (legacy enum for backward compat)"""
 
     NONE = 'none'
     STEAM = 'steam'
@@ -64,6 +72,35 @@ class AvailableBeverage(StrEnum):
     ESPRESSO = 'espresso'
     AMERICANO = 'americano'
     ESPRESSO2 = 'espresso2'
+
+
+# Maps the legacy AvailableBeverage string values to ECAM beverage IDs
+# so old service calls / automations keep working.
+LEGACY_BEVERAGE_MAP: dict[str, int] = {
+    'none': 0,
+    'steam': 17,
+    'long': 3,
+    'coffee': 2,
+    'dopio': 5,
+    'hot_water': 16,
+    'espresso': 1,
+    'americano': 6,
+    'espresso2': 4,
+}
+
+# Default recipe parameters for the legacy beverages (same values the
+# old hardcoded byte arrays contained).  These are used as fallback
+# when no profile-specific recipe is available.
+LEGACY_DEFAULT_PARAMS: dict[int, list[tuple[int, int]]] = {
+    1:  [(1, 40), (2, 3), (0, 0)],             # Espresso (Normal)
+    2:  [(1, 103), (2, 2), (0, 0)],            # Coffee (Mild)
+    3:  [(1, 160), (2, 3), (0, 0)],            # Long (Normal)
+    4:  [(1, 40), (2, 2), (0, 0)],             # Espresso2x (Mild)
+    5:  [(1, 120), (0, 0)],                    # Doppio+
+    6:  [(1, 40), (2, 3), (15, 110), (0, 0)],  # Americano (Normal)
+    16: [(15, 250), (28, 1)],                  # Hot Water
+    17: [(9, 900), (28, 1)],                   # Steam
+}
 
 
 class NotificationType(StrEnum):
@@ -188,6 +225,98 @@ class DelongiPrimadonna:
         self.profiles = list(AVAILABLE_PROFILES.values())
         self._profiles_loaded = False
         self._poll_unsub = None  # periodic poll cancel handle
+        # ── Dynamic beverage support ──────────────────────────────
+        # Ordered list of beverage display names for the select entity.
+        self.available_beverages: list[str] = []
+        # Maps display name → ECAM beverage ID.
+        self._beverage_name_to_id: dict[str, int] = {}
+        # Maps ECAM beverage ID → display name.
+        self._beverage_id_to_name: dict[int, str] = {}
+        # Default recipe params from MachinesModels.json per bev ID.
+        self._beverage_defaults: dict[int, list[tuple[int, int]]] = {}
+        # Profile-specific recipe overrides: {(profile_id, bev_id): params}
+        self._profile_recipes: dict[tuple[int, int], list[tuple[int, int]]] = {}
+        # Currently active profile id (1-based)
+        self._active_profile_id: int = 1
+        self._load_machine_beverages(machine)
+
+    def _load_machine_beverages(self, machine) -> None:
+        """Populate beverage lists from the machine model."""
+        names: list[str] = []
+        n2id: dict[str, int] = {}
+        id2n: dict[int, str] = {}
+        defaults: dict[int, list[tuple[int, int]]] = {}
+
+        if machine and machine.recipes:
+            for recipe in machine.recipes:
+                try:
+                    bev_id = int(recipe.id)
+                except (TypeError, ValueError):
+                    continue
+                display = (
+                    recipe.name.value
+                    if recipe.name is not None
+                    else f"Beverage {bev_id}"
+                )
+                # Avoid duplicate display names for custom recipes
+                if display in n2id:
+                    display = f"{display} ({bev_id})"
+                names.append(display)
+                n2id[display] = bev_id
+                id2n[bev_id] = display
+                # Build default parameters from JSON fields
+                params: list[tuple[int, int]] = []
+                if recipe.coffee_qty and recipe.coffee_qty > 0:
+                    params.append((1, recipe.coffee_qty))
+                if recipe.taste is not None:
+                    params.append((2, recipe.taste))
+                if recipe.milk_qty and recipe.milk_qty > 0:
+                    params.append((9, recipe.milk_qty))
+                # Temperature default = 0 (low) unless overridden
+                params.append((0, 0))
+                defaults[bev_id] = params
+
+        if not names:
+            # Fallback: use the legacy hardcoded beverages
+            for legacy_name, bev_id in LEGACY_BEVERAGE_MAP.items():
+                if bev_id == 0:  # skip 'none'
+                    continue
+                display = legacy_name.replace('_', ' ').title()
+                names.append(display)
+                n2id[display] = bev_id
+                id2n[bev_id] = display
+            defaults = dict(LEGACY_DEFAULT_PARAMS)
+
+        self.available_beverages = names
+        self._beverage_name_to_id = n2id
+        self._beverage_id_to_name = id2n
+        self._beverage_defaults = defaults
+
+    def resolve_beverage_id(self, option: str) -> int | None:
+        """Resolve a display name or legacy string to an ECAM beverage ID."""
+        # Try display name first
+        bev_id = self._beverage_name_to_id.get(option)
+        if bev_id is not None:
+            return bev_id
+        # Try legacy enum value
+        return LEGACY_BEVERAGE_MAP.get(option)
+
+    def get_recipe_params(
+        self, bev_id: int
+    ) -> list[tuple[int, int]]:
+        """Return recipe params for the active profile, with fallbacks."""
+        # 1. Profile-specific override
+        key = (self._active_profile_id, bev_id)
+        if key in self._profile_recipes:
+            return list(self._profile_recipes[key])
+        # 2. Machine model defaults
+        if bev_id in self._beverage_defaults:
+            return list(self._beverage_defaults[bev_id])
+        # 3. Legacy hardcoded defaults
+        if bev_id in LEGACY_DEFAULT_PARAMS:
+            return list(LEGACY_DEFAULT_PARAMS[bev_id])
+        # 4. Bare minimum
+        return []
 
     @property
     def signal_state_updated(self) -> str:
@@ -478,6 +607,16 @@ class DelongiPrimadonna:
             self.status = self._determine_status(
                 state, self.progress, self.alarm_mask
             )
+        elif answer_id == 0xA6:
+            # Profile-specific recipe response
+            parsed_recipe = parse_profile_recipe_response(value)
+            if parsed_recipe is not None:
+                pid, bev_id, params = parsed_recipe
+                self._profile_recipes[(pid, bev_id)] = params
+                _LOGGER.debug(
+                    "Profile %d beverage %d recipe: %s",
+                    pid, bev_id, params,
+                )
         elif answer_id == 0xA4:
             parsed = []
             try:
@@ -584,14 +723,37 @@ class DelongiPrimadonna:
         self.switches.sounds = False
         await self.send_command(self._make_switch_command())
 
-    async def beverage_start(self, beverage: AvailableBeverage) -> None:
-        """Start beverage"""
-        await self.send_command(BEVERAGE_COMMANDS.get(beverage).on)
+    async def beverage_start(self, beverage) -> None:
+        """Start a beverage by display name or legacy string."""
+        bev_id = self.resolve_beverage_id(beverage)
+        if bev_id is None or bev_id == 0:
+            _LOGGER.debug("Ignoring beverage_start for '%s'", beverage)
+            return
+        params = self.get_recipe_params(bev_id)
+        cmd = build_beverage_command(
+            beverage_id=bev_id,
+            action=ACTION_START,
+            parameters=params,
+            profile_id=self._active_profile_id,
+            operation=OP_PREPARE,
+        )
+        _LOGGER.info(
+            "Preparing beverage '%s' (id=%d, profile=%d) params=%s",
+            beverage, bev_id, self._active_profile_id, params,
+        )
+        self.cooking = beverage
+        await self.send_command(cmd)
 
     async def beverage_cancel(self) -> None:
-        """Cancel beverage"""
-        if self.cooking != AvailableBeverage.NONE:
-            await self.send_command(BEVERAGE_COMMANDS.get(self.cooking).off)
+        """Cancel the currently dispensing beverage."""
+        if self.cooking and self.cooking != AvailableBeverage.NONE:
+            bev_id = self.resolve_beverage_id(self.cooking)
+            if bev_id and bev_id != 0:
+                cmd = build_stop_command(
+                    beverage_id=bev_id,
+                    profile_id=self._active_profile_id,
+                )
+                await self.send_command(cmd)
 
     async def debug(self):
         """Send command which causes status reply"""
@@ -632,6 +794,8 @@ class DelongiPrimadonna:
             command[5] = self._n_profiles
             await self.send_command(command)
             self._profiles_loaded = True
+            # Load profile-specific recipes for the active profile
+            await self.load_profile_recipes(self._active_profile_id)
 
     async def set_time(self, dt: datetime) -> None:
         """Set device clock from provided datetime."""
@@ -643,8 +807,31 @@ class DelongiPrimadonna:
     async def select_profile(self, profile_id) -> None:
         """select a profile."""
         _LOGGER.debug("Send select profile command id=%s", profile_id)
+        self._active_profile_id = profile_id
         message = [0x0D, 0x06, 0xA9, 0xF0, profile_id, 0xD7, 0xC0]
         await self.send_command(message)
+        # Load profile-specific recipes for all beverages
+        await self.load_profile_recipes(profile_id)
+
+    async def load_profile_recipes(self, profile_id: int) -> None:
+        """Request profile-specific recipes for all known beverages."""
+        for bev_id in self._beverage_id_to_name:
+            cmd = build_read_profile_recipe(profile_id, bev_id)
+            try:
+                await self.send_command(cmd)
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug(
+                    "Failed to load recipe for profile=%d bev=%d",
+                    profile_id, bev_id,
+                )
+        _LOGGER.info(
+            "Loaded %d profile recipes for profile %d",
+            len([
+                k for k in self._profile_recipes
+                if k[0] == profile_id
+            ]),
+            profile_id,
+        )
 
     async def set_auto_power_off(self, power_off_interval) -> None:
         """Set auto power off time."""

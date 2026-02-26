@@ -12,7 +12,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .base_entity import DelonghiDeviceEntity
 from .const import AVAILABLE_PROFILES, DOMAIN, POWER_OFF_OPTIONS
-from .device import AvailableBeverage, BeverageEntityFeature, DelongiPrimadonna
+from .device import BeverageEntityFeature, DelongiPrimadonna
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,20 +81,32 @@ class ProfileSelect(DelonghiDeviceEntity, SelectEntity, RestoreEntity):
 class BeverageSelect(DelonghiDeviceEntity, SelectEntity, RestoreEntity):
     """Beverage start implementation by the select"""
 
-    _attr_options = [*AvailableBeverage]
-    _attr_current_option = [*AvailableBeverage][0]
     _attr_translation_key = 'make_beverage'
     _attr_icon = 'mdi:coffee'
     _attr_supported_features: BeverageEntityFeature \
         = BeverageEntityFeature.MAKE_BEVERAGE
 
+    def __init__(self, delongh_device: DelongiPrimadonna, hass: HomeAssistant):
+        super().__init__(delongh_device, hass)
+        beverages = delongh_device.available_beverages
+        self._attr_options = beverages if beverages else ['none']
+        self._attr_current_option = self._attr_options[0]
+
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) is not None:
-            self._attr_current_option = last_state.state
+            if last_state.state in self._attr_options:
+                self._attr_current_option = last_state.state
+
+    @property
+    def options(self) -> list[str]:
+        """Return dynamic beverage list from machine model."""
+        beverages = self.device.available_beverages
+        return beverages if beverages else ['none']
 
     async def async_select_option(self, option: str) -> None:
         """Select beverage action"""
+        self._attr_current_option = option
         self.hass.async_create_task(self.device.beverage_start(option))
 
 
