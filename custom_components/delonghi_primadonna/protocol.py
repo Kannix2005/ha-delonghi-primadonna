@@ -153,6 +153,57 @@ def build_read_profile_recipe(
     return list(pkt)
 
 
+def build_read_statistics_params(param_id: int, qty: int) -> list[int]:
+    """Build a 0xA2 request to read statistical parameters.
+
+    Reads ``qty`` sequential parameters starting at ``param_id``.
+    The machine responds with the same 0xA2 opcode containing the values.
+    """
+    pkt = bytearray(9)
+    pkt[0] = 0x0D
+    pkt[1] = 0x08
+    pkt[2] = 0xA2
+    pkt[3] = 0x0F
+    pkt[4] = (param_id >> 8) & 0xFF
+    pkt[5] = param_id & 0xFF
+    pkt[6] = qty & 0xFF
+    crc = crc_hqx(bytes(pkt[:-2]), 0x1D0F)
+    pkt[-2] = (crc >> 8) & 0xFF
+    pkt[-1] = crc & 0xFF
+    return list(pkt)
+
+
+def parse_statistics_response(
+    data: bytes | bytearray,
+) -> list[tuple[int, int]] | None:
+    """Parse a 0xA2 statistics response.
+
+    Each record is 6 bytes: 2-byte big-endian param ID + 4-byte big-endian value.
+    Returns ``[(param_id, value), …]`` or ``None`` for non-matching packets.
+    """
+    if len(data) < 4 or data[0] != 0xD0 or data[2] != 0xA2:
+        return None
+
+    length_byte = data[1] & 0xFF
+    n_params = (length_byte - 5) // 6
+
+    params: list[tuple[int, int]] = []
+    for i in range(n_params):
+        base = i * 6
+        if base + 10 > len(data):
+            break
+        param_id = (data[4 + base] << 8) | data[5 + base]
+        value = (
+            (data[6 + base] << 24)
+            | (data[7 + base] << 16)
+            | (data[8 + base] << 8)
+            | data[9 + base]
+        )
+        params.append((param_id, value))
+
+    return params
+
+
 def parse_profile_recipe_response(
     data: bytes | bytearray,
 ) -> tuple[int, int, list[tuple[int, int]]] | None:

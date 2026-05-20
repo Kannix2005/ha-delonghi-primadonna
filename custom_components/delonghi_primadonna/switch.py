@@ -27,6 +27,7 @@ async def async_setup_entry(
     model = get_machine_model(delongh_device.product_code)
 
     switches = [
+        DelongiPrimadonnaAlarmNotificationSwitch(delongh_device, hass),
         DelongiPrimadonnaNotificationSwitch(delongh_device, hass),
         DelongiPrimadonnaPowerSaveSwitch(delongh_device, hass),
         DelongiPrimadonnaSoundsSwitch(delongh_device, hass),
@@ -169,6 +170,36 @@ class DelongiPrimadonnaSoundsSwitch(
         """Turn the sounds off."""
         self.hass.async_create_task(self.device.sound_alarm_off())
         self._attr_is_on = False
+
+
+class DelongiPrimadonnaAlarmNotificationSwitch(
+    DelonghiDeviceEntity, ToggleEntity, RestoreEntity
+):
+    """Send a HA notification when a machine alarm is newly active."""
+
+    _attr_is_on = False
+    _attr_icon = 'mdi:bell-alert'
+    _attr_translation_key = 'alarm_notification'
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            self.device.alarm_notify = last_state.state == 'on'
+            self._attr_is_on = self.device.alarm_notify
+
+    @property
+    def is_on(self) -> bool:
+        return self.device.alarm_notify
+
+    @property
+    def entity_category(self, **kwargs: Any) -> None:
+        return EntityCategory.CONFIG
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self.device.alarm_notify = True
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self.device.alarm_notify = False
 
 
 class DelongiPrimadonnaTimeSyncSwitch(

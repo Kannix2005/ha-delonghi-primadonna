@@ -56,6 +56,19 @@
       }
     },
     "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "STANDBY": "Standby",
+          "TURNING_ON": "Turning on",
+          "SHUTTING_DOWN": "Shutting down",
+          "READY": "Ready",
+          "DISPENSING": "Dispensing",
+          "RINSING": "Rinsing",
+          "DESCALING": "Descaling",
+          "ALARM": "Alarm"
+        }
+      },
       "nozzle_status": {
         "name": "Nozzle Status",
         "state": {
@@ -85,6 +98,44 @@
           "door_opened": "Door opened",
           "preground_door_opened": "Preground door opened"
         }
+      },
+      "stat_total_coffee": {
+        "name": "Total coffees"
+      },
+      "stat_coffee_with_cold_milk": {
+        "name": "Coffees with cold milk"
+      },
+      "stat_coffee_with_hot_milk": {
+        "name": "Coffees with hot milk"
+      },
+      "stat_total_tea": {
+        "name": "Total teas"
+      },
+      "stat_total_descales": {
+        "name": "Total descalings"
+      },
+      "stat_milk_cleans": {
+        "name": "Milk clean cycles"
+      },
+      "stat_filters": {
+        "name": "Filter changes"
+      }
+    },
+    "switch": {
+      "alarm_notification": {
+        "name": "Alarm notifications"
+      },
+      "cup_light": {
+        "name": "Cup light"
+      },
+      "debug_notification": {
+        "name": "Debug notification"
+      },
+      "energy_save_mode": {
+        "name": "Energy save mode"
+      },
+      "sounds": {
+        "name": "Sounds"
       }
     }
   },

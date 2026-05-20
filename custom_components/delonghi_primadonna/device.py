@@ -42,7 +42,9 @@ from .protocol import (
     build_beverage_command,
     build_stop_command,
     build_read_profile_recipe,
+    build_read_statistics_params,
     parse_profile_recipe_response,
+    parse_statistics_response,
     ACTION_START,
     OP_PREPARE,
 )
@@ -177,6 +179,37 @@ DEVICE_NOTIFICATION = {
 }
 
 
+_ALARM_MESSAGES: dict[str, str] = {
+    'empty_water_tank':           'Water tank is empty',
+    'coffee_waste_container_full':'Coffee grounds container is full — please empty it',
+    'descale_alarm':              'Descaling required',
+    'replace_water_filter':       'Replace water filter',
+    'coffee_ground_too_fine':     'Coffee grind is too fine',
+    'coffee_beans_empty':         'Coffee beans empty — please refill',
+    'machine_to_service':         'Machine requires service',
+    'coffee_heater_probe_failure':'Coffee heater probe failure',
+    'too_much_coffee':            'Too much coffee — please check the grounds drawer',
+    'steamer_probe_failure':      'Steamer probe failure',
+    'empty_drip_tray':            'Empty the drip tray',
+    'tank_too_full':              'Water tank is overfull',
+    'bean_hopper_absent':         'Bean hopper is missing',
+    'not_enough_coffee':          'Not enough coffee',
+    'grinding_unit_1_problem':    'Grinding unit 1 problem',
+    'grinding_unit_2_problem':    'Grinding unit 2 problem',
+}
+
+# Maps 0xA2 parameter IDs to device attribute names.
+_STAT_PARAM_MAP: dict[int, str] = {
+    3000: 'stat_total_coffee',
+    3001: 'stat_coffee_with_cold_milk',
+    3003: 'stat_coffee_with_hot_milk',
+    106:  'stat_total_tea',
+    105:  'stat_total_descales',
+    108:  'stat_milk_cleans',
+    115:  'stat_filters',
+}
+
+
 class DelongiPrimadonna:
     """Delongi Primadonna class"""
 
@@ -207,6 +240,16 @@ class DelongiPrimadonna:
         self.switches = DeviceSwitches()
         self.active_switches: list[MachineSwitch] = []
         self.sync_time = False
+        self.alarm_notify = False
+        self._notified_alarms: frozenset = frozenset()
+        # Statistics counters (read via 0xA2 BLE command)
+        self.stat_total_coffee: int = 0
+        self.stat_coffee_with_cold_milk: int = 0
+        self.stat_coffee_with_hot_milk: int = 0
+        self.stat_total_tea: int = 0
+        self.stat_total_descales: int = 0
+        self.stat_milk_cleans: int = 0
+        self.stat_filters: int = 0
         self._lock = asyncio.Lock()
         self._rx_buffer = bytearray()
         self._response_event = None
@@ -591,11 +634,12 @@ class DelongiPrimadonna:
             # byte[10]    = progress (0-100)
             # byte[11]    = percentage (0-100)
             # byte[12-13] = u16 LE alarms HIGH (bits 16-31)
-            self.steam_nozzle = NOZZLE_STATE.get(value[4], str(value[4]))
+            self.steam_nozzle = NOZZLE_STATE.get(value[4], NOZZLE_STATE[-1])
             self.active_switches = parse_switches(value)
             self.active_alarms = parse_alarms(value)
             self.alarm_mask = get_alarm_mask(value)
             self.service = value[7]  # alarm_low — backward compat
+            await self._notify_new_alarms()
 
             state = value[9]
             self.machine_state = state
@@ -641,6 +685,12 @@ class DelongiPrimadonna:
                 status,
                 hexlify(value, " "),
             )
+        elif answer_id == 0xA2:
+            parsed_stats = parse_statistics_response(value)
+            if parsed_stats:
+                for param_id, val in parsed_stats:
+                    self._update_statistic(param_id, val)
+                _LOGGER.debug("Statistics updated: %s", parsed_stats)
 
         hex_value = hexlify(value, ' ')
 
@@ -688,6 +738,48 @@ class DelongiPrimadonna:
             profile_index += 1
             idx += NAME_SIZE + NAME_OFFSET
         return profiles
+
+    async def _notify_new_alarms(self) -> None:
+        """Fire a persistent HA notification for each newly appeared alarm."""
+        if not self.alarm_notify:
+            return
+        current = frozenset(a.value for a in self.active_alarms)
+        new_alarms = current - self._notified_alarms
+        if new_alarms:
+            lines = [
+                f"• {_ALARM_MESSAGES.get(v, v.replace('_', ' ').title())}"
+                for v in sorted(new_alarms)
+            ]
+            await self._hass.services.async_call(
+                'persistent_notification',
+                'create',
+                {
+                    'message': '\n'.join(lines),
+                    'title': f'{self.name}: Alert',
+                    'notification_id': f'{self.mac}_alarm',
+                },
+            )
+        elif not current and self._notified_alarms:
+            await self._hass.services.async_call(
+                'persistent_notification',
+                'dismiss',
+                {'notification_id': f'{self.mac}_alarm'},
+            )
+        self._notified_alarms = current
+
+    def _update_statistic(self, param_id: int, value: int) -> None:
+        attr = _STAT_PARAM_MAP.get(param_id)
+        if attr:
+            setattr(self, attr, value)
+
+    async def read_statistics(self) -> None:
+        """Request machine statistics via 0xA2 BLE commands."""
+        # beverage counters: 3000, 3001, 3002, 3003
+        await self.send_command(build_read_statistics_params(3000, 4))
+        # maintenance counters: 105, 106, 107, 108
+        await self.send_command(build_read_statistics_params(105, 4))
+        # filter counter: 115
+        await self.send_command(build_read_statistics_params(115, 1))
 
     async def power_on(self) -> None:
         """Turn the device on."""
@@ -796,6 +888,8 @@ class DelongiPrimadonna:
             self._profiles_loaded = True
             # Load profile-specific recipes for the active profile
             await self.load_profile_recipes(self._active_profile_id)
+            # Read machine statistics counters
+            await self.read_statistics()
 
     async def set_time(self, dt: datetime) -> None:
         """Set device clock from provided datetime."""

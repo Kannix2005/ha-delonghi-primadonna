@@ -6,7 +6,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -90,19 +90,26 @@ class BeverageSelect(DelonghiDeviceEntity, SelectEntity, RestoreEntity):
         super().__init__(delongh_device, hass)
         beverages = delongh_device.available_beverages
         self._attr_options = beverages if beverages else ['none']
-        self._attr_current_option = self._attr_options[0]
+        self._attr_current_option = None
+        self._was_dispensing = False
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if (last_state := await self.async_get_last_state()) is not None:
-            if last_state.state in self._attr_options:
-                self._attr_current_option = last_state.state
 
     @property
     def options(self) -> list[str]:
         """Return dynamic beverage list from machine model."""
         beverages = self.device.available_beverages
         return beverages if beverages else ['none']
+
+    @callback
+    def _handle_state_update(self) -> None:
+        """Reset selection to None when the machine finishes dispensing."""
+        currently_dispensing = self.device.status == 'DISPENSING'
+        if self._was_dispensing and not currently_dispensing:
+            self._attr_current_option = None
+        self._was_dispensing = currently_dispensing
+        self.async_write_ha_state()
 
     async def async_select_option(self, option: str) -> None:
         """Select beverage action"""

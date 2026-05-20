@@ -20,5 +20,5 @@
     "documentation": "https://github.com/Kannix2005/ha-delonghi-primadonna",
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/Kannix2005/ha-delonghi-primadonna/issues",
-    "version": "2.0.0"
+    "version": "2.3.0"
 }

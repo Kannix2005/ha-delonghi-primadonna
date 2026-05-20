@@ -56,6 +56,19 @@
       }
     },
     "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "STANDBY": "Standby",
+          "TURNING_ON": "Einschalten",
+          "SHUTTING_DOWN": "Ausschalten",
+          "READY": "Bereit",
+          "DISPENSING": "Zubereitung",
+          "RINSING": "Spülen",
+          "DESCALING": "Entkalkung",
+          "ALARM": "Alarm"
+        }
+      },
       "nozzle_status": {
         "name": "Düsenzustand",
         "state": {
@@ -85,6 +98,44 @@
           "door_opened": "Tür geöffnet",
           "preground_door_opened": "Fach für gemahlenen Kaffee geöffnet"
         }
+      },
+      "stat_total_coffee": {
+        "name": "Kaffees gesamt"
+      },
+      "stat_coffee_with_cold_milk": {
+        "name": "Kaffees mit kalter Milch"
+      },
+      "stat_coffee_with_hot_milk": {
+        "name": "Kaffees mit heißer Milch"
+      },
+      "stat_total_tea": {
+        "name": "Tees gesamt"
+      },
+      "stat_total_descales": {
+        "name": "Entkalkungen gesamt"
+      },
+      "stat_milk_cleans": {
+        "name": "Milchreinigungszyklen"
+      },
+      "stat_filters": {
+        "name": "Filterwechsel"
+      }
+    },
+    "switch": {
+      "alarm_notification": {
+        "name": "Alarm-Benachrichtigungen"
+      },
+      "cup_light": {
+        "name": "Tassenbeleuchtung"
+      },
+      "debug_notification": {
+        "name": "Debug-Benachrichtigung"
+      },
+      "energy_save_mode": {
+        "name": "Energiesparmodus"
+      },
+      "sounds": {
+        "name": "Signaltöne"
       }
     }
   },

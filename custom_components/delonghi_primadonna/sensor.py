@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, PERCENTAGE
 from homeassistant.core import HomeAssistant
@@ -15,6 +15,18 @@ from .device import DelongiPrimadonna, NOZZLE_STATE
 from .machine_switch import MachineSwitch, MachineAlarm
 
 
+_STAT_SENSORS = [
+    # (translation_key, attr_name, icon)
+    ('stat_total_coffee',           'stat_total_coffee',           'mdi:coffee'),
+    ('stat_coffee_with_cold_milk',  'stat_coffee_with_cold_milk',  'mdi:coffee'),
+    ('stat_coffee_with_hot_milk',   'stat_coffee_with_hot_milk',   'mdi:coffee'),
+    ('stat_total_tea',              'stat_total_tea',              'mdi:tea'),
+    ('stat_total_descales',         'stat_total_descales',         'mdi:water-pump'),
+    ('stat_milk_cleans',            'stat_milk_cleans',            'mdi:cup-water'),
+    ('stat_filters',                'stat_filters',                'mdi:filter'),
+]
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -23,15 +35,20 @@ async def async_setup_entry(
     """Register sensor entities for a config entry."""
 
     delongh_device: DelongiPrimadonna = hass.data[DOMAIN][entry.unique_id]
-    async_add_entities(
-        [
-            DelongiPrimadonnaNozzleSensor(delongh_device, hass),
-            DelongiPrimadonnaStatusSensor(delongh_device, hass),
-            DelongiPrimadonnaSwitchesSensor(delongh_device, hass),
-            DelongiPrimadonnaAlarmSensor(delongh_device, hass),
-            DelongiPrimadonnaProgressSensor(delongh_device, hass),
-        ]
-    )
+    entities = [
+        DelongiPrimadonnaNozzleSensor(delongh_device, hass),
+        DelongiPrimadonnaStatusSensor(delongh_device, hass),
+        DelongiPrimadonnaSwitchesSensor(delongh_device, hass),
+        DelongiPrimadonnaAlarmSensor(delongh_device, hass),
+        DelongiPrimadonnaProgressSensor(delongh_device, hass),
+    ]
+    for translation_key, attr_name, icon in _STAT_SENSORS:
+        entities.append(
+            DelongiPrimadonnaStatSensor(
+                delongh_device, hass, translation_key, attr_name, icon
+            )
+        )
+    async_add_entities(entities)
     return True
 
 
@@ -82,7 +99,7 @@ class DelongiPrimadonnaStatusSensor(
 
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_name = 'Status'
+    _attr_translation_key = 'status'
     _attr_options = MACHINE_STATUSES
 
     async def async_added_to_hass(self) -> None:
@@ -207,3 +224,30 @@ class DelongiPrimadonnaProgressSensor(
     @property
     def native_value(self):
         return self.device.percentage
+
+
+class DelongiPrimadonnaStatSensor(
+    DelonghiDeviceEntity, SensorEntity, RestoreEntity
+):
+    """Lifetime counter statistic read from the machine via 0xA2 BLE command."""
+
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, device, hass, translation_key: str, attr_name: str, icon: str):
+        super().__init__(device, hass)
+        self._stat_attr = attr_name
+        self._attr_translation_key = translation_key
+        self._attr_icon = icon
+        self._attr_unique_id = f'{device.mac}_{attr_name}'
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._attr_native_value = int(last_state.state)
+            except (ValueError, TypeError):
+                pass
+
+    @property
+    def native_value(self):
+        return getattr(self.device, self._stat_attr)
