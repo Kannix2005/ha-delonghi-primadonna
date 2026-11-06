@@ -14,6 +14,7 @@ from datetime import datetime
 from enum import IntFlag
 
 from bleak import BleakClient
+from bleak_retry_connector import establish_connection
 from bleak.exc import BleakDBusError, BleakError
 from homeassistant.components import bluetooth
 from homeassistant.const import CONF_MAC, CONF_MODEL, CONF_NAME
@@ -407,15 +408,16 @@ class DelongiPrimadonna:
                                 " could not be found."
                             )
                         )
-                    self._client = BleakClient(self._device)
                     _LOGGER.info(
                         "Connect to %s (attempt %d)",
                         self.mac,
                         attempt + 1,
                     )
-                    await asyncio.wait_for(
-                        self._client.connect(),
-                        timeout=10,
+                    self._client = await establish_connection(
+                        BleakClient,
+                        self._device,
+                        self.mac,
+                        max_attempts=1,
                     )
                     # Service discovery is performed during the connection
                     # process. Accessing ``get_services`` directly raises a
